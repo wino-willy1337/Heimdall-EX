@@ -4,7 +4,7 @@ import os
 import sys
 import time
 from util import dependencies, required_tools
-from modules import network_enum, web_enum, dns_enum, smb_enum, snmp_enum, misc_utils
+from modules import network_enum, web_enum, dns_enum, smb_enum, snmp_enum, general_utils
 
 def banner():
     print("""
@@ -110,7 +110,7 @@ def main_menu(target, working_directory):
         elif choice == '3': dns_enum.run_dnsrecon(target, working_directory)
         elif choice == '4': smb_enum.run_enum4linux(target, working_directory)
         elif choice == '5': snmp_enum.run_snmpcheck(target, working_directory)
-        elif choice == '6': misc_utils.run_whois(target, working_directory)
+        elif choice == '6': general_utils.run_whois(target, working_directory)
         elif choice == '99':
             print("[*] Exiting Heimdall-EX. Goodbye!")
             sys.exit(0)

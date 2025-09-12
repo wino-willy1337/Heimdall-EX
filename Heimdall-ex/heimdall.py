@@ -1,9 +1,10 @@
+# file: heimdall.py
+
 import os
 import sys
 import time
-
 from util import dependencies, required_tools
-from modules import network_enum
+from modules import network_enum, web_enum, dns_enum, smb_enum, snmp_enum, misc_utils
 
 def banner():
     print("""
@@ -13,69 +14,125 @@ def banner():
 |  _  |  __/ | | | | | | (_| | (_| | | |_____| |___ /  \ 
 |_| |_|\___|_|_| |_| |_|\__,_|\__,_|_|_|     |_____/_/\_\
          
-          """)
+    """)
+    print("Author: wino_willy | Version 1.2")
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
-    time.sleep(1)
 
 def tool_check():
-    print("Checking and installing required tools...")
-    for tool, package in required_tools.required_tools:
+    """Checks for all required tools before the main program runs."""
+    print("[*] Checking for required tools...")
+    tools_to_check = required_tools.required_tools
+    for tool, package in tools_to_check:
         dependencies.check_and_install_tool(tool, package)
-    print("All required tools are installed.")
+    print("[+] All required tools are installed and ready.")
+    time.sleep(2)
 
-def working_directory_setup():
-    banner()
+def get_working_directory():
+    """Prompts the user to set a working directory."""
     input_dir = input("Enter the working directory (default: ./recon): ") or "./recon"
-    if not os.path.exists(input_dir):
-        os.makedirs(input_dir)
-    else:
-        print(f"Directory {input_dir} already exists. Using existing directory.")
+    os.makedirs(input_dir, exist_ok=True)
+    print(f"[*] Working directory set to: {input_dir}")
     return input_dir
 
-def target_input():
+def get_target():
+    """Prompts the user for a target IP or domain."""
     target = input("Enter the target IP address or domain: ")
-    if not target or target.lower() in ["localhost", "127.0.0.1"]:
-        print("Invalid target provided. Exiting.")
+    if not target:
+        print("[!] Invalid target provided. Exiting.")
         sys.exit(1)
-    if target.lower() == "exit":
-        print("Exiting.")
-        sys.exit(0)
     return target
 
-def nmap(target, working_directory):
-    network_enum.nmap_scan(target, working_directory)
+# --- Sub-Menu Functions ---
 
-def target_finder(subnet, working_directory):
-    network_enum.run_target_finder(subnet, working_directory)
+def web_menu(target, working_directory):
+    while True:
+        clear_screen(); banner()
+        print(f"--- Web Enumeration Menu (Target: {target}) ---")
+        print("1) Run Gobuster (dir scan)")
+        print("2) Run Nikto (vulnerability scan)")
+        print("3) Run WhatWeb (technology stack)")
+        print("4) Run Dirb (dir scan)")
+        print("5) Run ALL Web Scans")
+        print("9) Back to Main Menu")
+        choice = input("\nEnter choice: ")
 
-def setup():
-    print("Setting up Heimdall-ex...")
-    working_directory = working_directory_setup()
-    target = target_input()
-    print("Setup complete.")
-    time.sleep(1)
-    return target, working_directory
+        if choice == '1': web_enum.run_gobuster(target, working_directory)
+        elif choice == '2': web_enum.run_nikto(target, working_directory)
+        elif choice == '3': web_enum.run_whatweb(target, working_directory)
+        elif choice == '4': web_enum.run_dirb(target, working_directory)
+        elif choice == '5':
+            web_enum.run_gobuster(target, working_directory)
+            web_enum.run_nikto(target, working_directory)
+            web_enum.run_whatweb(target, working_directory)
+            web_enum.run_dirb(target, working_directory)
+        elif choice == '9': return
+        else: print("[!] Invalid choice.")
+        input("\nPress Enter to continue...")
+
+def network_menu(target, working_directory):
+    while True:
+        clear_screen(); banner()
+        print(f"--- Network Scanning Menu (Target: {target}) ---")
+        print("1) Run Nmap (Standard Scripts, Service Versions)")
+        print("2) Run Masscan (Fast, All TCP Ports)")
+        print("9) Back to Main Menu")
+        choice = input("\nEnter choice: ")
+
+        if choice == '1': network_enum.nmap_scan(target, working_directory)
+        elif choice == '2': network_enum.run_masscan(target, working_directory)
+        elif choice == '9': return
+        else: print("[!] Invalid choice.")
+        input("\nPress Enter to continue...")
+
+
+# --- Main Menu ---
+
+def main_menu(target, working_directory):
+    """Displays the main tool menu to the user."""
+    while True:
+        clear_screen(); banner()
+        print(f"Target: {target} | Outputting to: {working_directory}\n")
+        print("Select a tool category to run:")
+        print("  1) Network Scans")
+        print("  2) Web Enumeration")
+        print("  3) DNS Enumeration")
+        print("  4) SMB Enumeration")
+        print("  5) SNMP Enumeration")
+        print("  6) Misc Utilities")
+        print("  99) Exit")
+        
+        choice = input("\nEnter your choice: ")
+        
+        if choice == '1': network_menu(target, working_directory)
+        elif choice == '2': web_menu(target, working_directory)
+        elif choice == '3': dns_enum.run_dnsrecon(target, working_directory)
+        elif choice == '4': smb_enum.run_enum4linux(target, working_directory)
+        elif choice == '5': snmp_enum.run_snmpcheck(target, working_directory)
+        elif choice == '6': misc_utils.run_whois(target, working_directory)
+        elif choice == '99':
+            print("[*] Exiting Heimdall-EX. Goodbye!")
+            sys.exit(0)
+        else:
+            print("[!] Invalid choice, please try again.")
+            time.sleep(1)
 
 def main():
-    print("Heimdall-ex - Automated Reconnaissance Tool")
-    print("Version 1.0")
-    tool_check()
+    """Main function to run the framework."""
     clear_screen()
     banner()
-    print("Automated Reconnaissance Tool")
-    print("Version 1.0")
-    print("Author: wino_willy")
-    subnet = input("Enter subnet target (e.g., 192.168.1.0/24): ")
-    working_directory = working_directory_setup()
-    target_finder(subnet, working_directory)
-    target = target_input()
-    print(f"Starting reconnaissance on {target}...")
-    nmap(target, working_directory)
-    print("Reconnaissance completed.")
-    time.sleep(1)
+    tool_check()
+    
+    working_directory = get_working_directory()
+    target = get_target()
+    
+    main_menu(target, working_directory)
 
 if __name__ == "__main__":
-    main()
-    
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\n[*] User interrupted. Exiting.")
+        sys.exit(0)
+        

@@ -3,6 +3,10 @@
 import os
 import sys
 import time
+
+# Proactively add common paths where tools might be installed
+os.environ['PATH'] += os.pathsep + '/usr/local/bin' + os.pathsep + '/opt/bin' + os.pathsep + '/snap/bin'
+
 from util import dependencies, required_tools
 from modules import network_enum, web_enum, dns_enum, smb_enum, snmp_enum, general_utils, host_discovery
 
@@ -15,7 +19,7 @@ def banner():
 |_| |_|\___|_|_| |_| |_|\__,_|\__,_|_|_|     |_____/_/\_\
          
     """)
-    print("Author: wino_willy | Version 2.2 - Target Discovery")
+    print("Author: wino_willy | Version 2.3 - PATH Enhancement")
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -33,7 +37,7 @@ def tool_check():
         all_tools_present = False
 
     if not all_tools_present:
-        print("\n[!] Some dependencies are missing. Please install them and try again. Exiting.")
+        print("\n[!] A required dependency could not be found or installed. Please review the messages above, resolve the issues, and try again. Exiting.")
         sys.exit(1)
 
     print("[+] All dependencies are satisfied.")

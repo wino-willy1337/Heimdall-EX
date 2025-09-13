@@ -3,6 +3,7 @@
 import shutil
 import subprocess
 import sys
+import os
 
 def check_and_install_tool(tool_name: str, package_name: str = None):
     """
@@ -48,7 +49,11 @@ def check_and_install_tool(tool_name: str, package_name: str = None):
                 print(f"[+] '{tool_name}' installed successfully.")
                 return True
             else:
-                print(f"[!] Installation command ran, but '{tool_name}' is still not in PATH.")
+                print(f"[!] Installation command ran, but '{tool_name}' is still not in your PATH.")
+                print("    - Please try opening a new terminal and running the script again.")
+                print("    - The tool may be installed in a location like /usr/local/bin or /snap/bin.")
+                print("    - Ensure the tool's installation directory is in your shell's PATH variable.")
+                print(f"    - Your current PATH is: {os.environ.get('PATH')}")
                 return False
         except subprocess.CalledProcessError as e:
             print(f"[!] Installation command failed with error: {e}")

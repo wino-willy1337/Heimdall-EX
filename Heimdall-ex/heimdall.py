@@ -4,9 +4,8 @@ import os
 import sys
 import time
 from util import dependencies, required_tools
-from modules import network_enum, web_enum, dns_enum, smb_enum, snmp_enum, general_utils
+from modules import network_enum, web_enum, dns_enum, smb_enum, snmp_enum, general_utils, host_discovery
 
-# ... (banner, clear_screen, tool_check, get_working_directory, get_target functions are unchanged) ...
 def banner():
     print("""
  _   _      _               _       _ _       _______  __
@@ -16,7 +15,7 @@ def banner():
 |_| |_|\___|_|_| |_| |_|\__,_|\__,_|_|_|     |_____/_/\_\
          
     """)
-    print("Author: wino_willy | Version 2.1 - Refined")
+    print("Author: wino_willy | Version 2.2 - Target Discovery")
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -24,11 +23,20 @@ def clear_screen():
 def tool_check():
     """Checks for all required tools before the main program runs."""
     print("[*] Verifying all required external tools...")
-    # Make sure to update required_tools.py to use 'enum4linux-ng'
     tools_to_check = required_tools.required_tools
+    all_tools_present = True
     for tool, package in tools_to_check:
-        dependencies.check_and_install_tool(tool, package)
-    print("[+] All tool dependencies are satisfied.")
+        if not dependencies.check_and_install_tool(tool, package):
+            all_tools_present = False
+    
+    if not dependencies.check_and_install_python_package('netifaces'):
+        all_tools_present = False
+
+    if not all_tools_present:
+        print("\n[!] Some dependencies are missing. Please install them and try again. Exiting.")
+        sys.exit(1)
+
+    print("[+] All dependencies are satisfied.")
     time.sleep(2)
 
 def get_working_directory():
@@ -38,16 +46,66 @@ def get_working_directory():
     print(f"[*] Working directory set to: {input_dir}")
     return input_dir
 
-def get_target():
-    """Prompts the user for a target IP or domain."""
-    target = input("Enter target IP or domain: ")
-    if not target:
-        print("[!] Invalid target. Exiting.")
-        sys.exit(1)
-    return target
+def select_target():
+    """Prompts the user to either enter a target or scan for one."""
+    while True:
+        print("\n--- Target Selection ---")
+        print("1) Enter target manually")
+        print("2) Scan local network for targets")
+        choice = input("\nEnter choice: ")
 
-# --- REFINED Sub-Menu Functions ---
+        if choice == '1':
+            target = input("Enter target IP or domain: ")
+            if not target:
+                print("[!] Invalid target.")
+                continue
+            return target
+        elif choice == '2':
+            local_network = host_discovery.get_local_network()
+            network_range = ""
+            if not local_network:
+                print("[!] Could not automatically determine the local network.")
+                network_range = input("Please enter the network range to scan (e.g., 192.168.1.0/24): ")
+            else:
+                print(f"[*] Automatically detected local network: {local_network}")
+                use_detected = input("Scan this network? [Y/n]: ").lower()
+                if use_detected in ('', 'y', 'yes'):
+                    network_range = local_network
+                else:
+                    network_range = input("Please enter the network range to scan (e.g., 192.168.1.0/24): ")
+            
+            if not network_range:
+                print("[!] No network range provided.")
+                continue
 
+            hosts = host_discovery.discover_hosts(network_range)
+            if not hosts:
+                print("[!] No hosts found on the network. Returning to target selection.")
+                time.sleep(2)
+                continue
+
+            print("\n--- Discovered Hosts ---")
+            for i, host in enumerate(hosts):
+                print(f"{i+1}) {host}")
+
+            while True:
+                try:
+                    host_choice_input = input("\nSelect a target by number (or 'b' to go back): ")
+                    if host_choice_input.lower() == 'b':
+                        break
+                    host_choice = int(host_choice_input)
+                    if 1 <= host_choice <= len(hosts):
+                        # Extract just the IP or hostname for the target
+                        return hosts[host_choice - 1].split()[0]
+                    else:
+                        print("[!] Invalid number.")
+                except ValueError:
+                    print("[!] Please enter a number.")
+            continue # Go back to the main target selection menu
+        else:
+            print("[!] Invalid choice.")
+
+# --- Sub-Menu Functions ---
 def network_menu(target, wd):
     menu_actions = {
         '1': lambda: network_enum.nmap_scan(target, wd),
@@ -100,7 +158,6 @@ def web_menu(target, wd):
             print("[!] Invalid choice.")
             time.sleep(1)
 
-# ... (The rest of main_menu, main, and __name__ == "__main__" are unchanged) ...
 def dns_menu(target, wd):
     while True:
         clear_screen(); banner()
@@ -160,7 +217,7 @@ def main():
     tool_check()
     
     working_directory = get_working_directory()
-    target = get_target()
+    target = select_target()
     
     main_menu(target, working_directory)
 

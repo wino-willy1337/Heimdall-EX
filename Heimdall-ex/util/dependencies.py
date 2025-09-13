@@ -14,7 +14,6 @@ def check_and_install_tool(tool_name: str, package_name: str = None):
 
     print(f"[*] Verifying '{tool_name}'...")
     if shutil.which(tool_name):
-        # The tool is already installed, no need to print anything extra.
         return True
 
     print(f"[!] '{tool_name}' is not found in PATH.")
@@ -35,7 +34,6 @@ def check_and_install_tool(tool_name: str, package_name: str = None):
         print(f"[!] Could not determine a supported package manager. Please install '{package_name}' manually.")
         return False
 
-    # Prompt the user for permission to install
     try:
         user_input = input(f"    Attempt to install it using '{pm_found}'? [y/N]: ")
     except KeyboardInterrupt:
@@ -45,7 +43,6 @@ def check_and_install_tool(tool_name: str, package_name: str = None):
     if user_input.lower() == 'y':
         print(f"[*] Running installation command. You may be prompted for your password.")
         try:
-            # We don't use shell=True for security. We pass the command as a list.
             subprocess.run(install_command.split(), check=True)
             if shutil.which(tool_name):
                 print(f"[+] '{tool_name}' installed successfully.")
@@ -59,3 +56,36 @@ def check_and_install_tool(tool_name: str, package_name: str = None):
     else:
         print("[!] Installation declined by user.")
         return False
+
+def check_and_install_python_package(package_name: str, import_name: str = None):
+    """
+    Checks if a Python package is installed, and if not, prompts to install it via pip.
+    """
+    if not import_name:
+        import_name = package_name
+
+    print(f"[*] Verifying Python package '{package_name}'...")
+    try:
+        __import__(import_name)
+        return True
+    except ImportError:
+        print(f"[!] Python package '{package_name}' is not found.")
+        
+        try:
+            user_input = input(f"    Attempt to install it using 'pip'? [y/N]: ")
+        except KeyboardInterrupt:
+            print("\n[!] User cancelled. Aborting dependency installation.")
+            return False
+            
+        if user_input.lower() == 'y':
+            print(f"[*] Running installation command...")
+            try:
+                subprocess.run([sys.executable, "-m", "pip", "install", package_name], check=True)
+                print(f"[+] '{package_name}' installed successfully.")
+                return True
+            except subprocess.CalledProcessError as e:
+                print(f"[!] Installation command failed with error: {e}")
+                return False
+        else:
+            print("[!] Installation declined by user.")
+            return False

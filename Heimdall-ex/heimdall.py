@@ -6,6 +6,7 @@ import time
 from util import dependencies, required_tools
 from modules import network_enum, web_enum, dns_enum, smb_enum, snmp_enum, general_utils
 
+# ... (banner, clear_screen, tool_check, get_working_directory, get_target functions are unchanged) ...
 def banner():
     print("""
  _   _      _               _       _ _       _______  __
@@ -15,7 +16,7 @@ def banner():
 |_| |_|\___|_|_| |_| |_|\__,_|\__,_|_|_|     |_____/_/\_\
          
     """)
-    print("Author: wino_willy | Version 2.0 - The Great Refactor")
+    print("Author: wino_willy | Version 2.1 - Refined")
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -45,43 +46,61 @@ def get_target():
         sys.exit(1)
     return target
 
-# --- Sub-Menus for Organization ---
+# --- REFINED Sub-Menu Functions ---
 
 def network_menu(target, wd):
+    menu_actions = {
+        '1': lambda: network_enum.nmap_scan(target, wd),
+        '2': lambda: network_enum.run_masscan(target, wd, full_scan=False), # Fast Scan
+        '3': lambda: network_enum.run_masscan(target, wd, full_scan=True),  # Full Scan
+    }
     while True:
         clear_screen(); banner()
         print(f"--- Network Enumeration (Target: {target}) ---")
         print("1) Run In-Depth Nmap Scan (All TCP Ports + Scripts)")
-        print("2) Run Masscan (Extremely Fast Port Scan)")
+        print("2) Run Masscan (FAST - Top 1000 Ports)")
+        print("3) Run Masscan (FULL - All 65535 Ports - VERY SLOW)")
         print("9) Back to Main Menu")
         choice = input("\nEnter choice: ")
-        if choice == '1': network_enum.nmap_scan(target, wd)
-        elif choice == '2': network_enum.run_masscan(target, wd)
-        elif choice == '9': return
-        else: print("[!] Invalid choice.")
-        input("\nPress Enter to continue...")
+
+        action = menu_actions.get(choice)
+        if action:
+            action()
+            input("\nPress Enter to continue...")
+        elif choice == '9':
+            return
+        else:
+            print("[!] Invalid choice.")
+            time.sleep(1)
 
 def web_menu(target, wd):
+    menu_actions = {
+        '1': lambda: web_enum.run_gobuster(target, wd),
+        '2': lambda: web_enum.run_gobuster_vhost(target, wd),
+        '3': lambda: web_enum.run_nikto(target, wd),
+        '4': lambda: (web_enum.run_gobuster(target, wd), web_enum.run_gobuster_vhost(target, wd), web_enum.run_nikto(target, wd)),
+    }
     while True:
         clear_screen(); banner()
         print(f"--- Web Enumeration (Target: {target}) ---")
         print("1) Run Gobuster (Directory Scan)")
         print("2) Run Gobuster (VHOST / Subdomain Scan)")
         print("3) Run Nikto (Vulnerability Scan)")
-        print("4) Run All Web Scans")
+        print("4) Run ALL Web Scans")
         print("9) Back to Main Menu")
         choice = input("\nEnter choice: ")
-        if choice == '1': web_enum.run_gobuster(target, wd)
-        elif choice == '2': web_enum.run_gobuster_vhost(target, wd)
-        elif choice == '3': web_enum.run_nikto(target, wd)
-        elif choice == '4':
-            web_enum.run_gobuster(target, wd)
-            web_enum.run_gobuster_vhost(target, wd)
-            web_enum.run_nikto(target, wd)
-        elif choice == '9': return
-        else: print("[!] Invalid choice.")
-        input("\nPress Enter to continue...")
 
+        action = menu_actions.get(choice)
+        if action:
+            action()
+            input("\nPress Enter to continue...")
+        elif choice == '9':
+            return
+        else:
+            print("[!] Invalid choice.")
+            time.sleep(1)
+
+# ... (The rest of main_menu, main, and __name__ == "__main__" are unchanged) ...
 def dns_menu(target, wd):
     while True:
         clear_screen(); banner()

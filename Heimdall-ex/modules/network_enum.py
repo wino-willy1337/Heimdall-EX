@@ -5,6 +5,7 @@ import os
 import re
 from util.spinner import Spinner
 
+# ... (The _parse_nmap_ports and nmap_scan functions remain the same) ...
 def _parse_nmap_ports(scan_output: str) -> str:
     """Helper function to parse nmap output for open TCP ports."""
     ports = []
@@ -65,18 +66,28 @@ def nmap_scan(target: str, output_dir: str):
         spinner.stop()
         print(f"\n[!] Nmap Stage 2 failed. Error: {getattr(e, 'stderr', e)}")
 
-def run_masscan(target: str, output_dir: str):
-    """Runs a fast masscan on all TCP ports."""
-    print(f"[*] Running Masscan on {target}...")
-    output_file = os.path.join(output_dir, f"{target}_masscan.txt")
-    command = ["sudo", "masscan", target, "-p1-65535", "--rate=1000", "-oG", output_file]
+def run_masscan(target: str, output_dir: str, full_scan: bool = False):
+    """Runs a fast masscan on the target. Defaults to top 1000 ports."""
+    scan_type = "Full (All Ports)" if full_scan else "Fast (Top 1000 Ports)"
+    print(f"[*] Running Masscan ({scan_type}) on {target}...")
     
-    spinner = Spinner("Running Masscan (rate=1000)...")
+    output_file = os.path.join(output_dir, f"{target}_masscan_{'full' if full_scan else 'fast'}.txt")
+    
+    if full_scan:
+        # The original slow scan on all 65535 ports
+        port_range = "1-65535"
+    else:
+        # A much faster scan on the 1000 most common ports
+        port_range = "--top-ports-1000"
+
+    command = ["sudo", "masscan", target, "-p", port_range, "--rate=1000", "-oG", output_file]
+    
+    spinner = Spinner(f"Running Masscan ({scan_type})...")
     spinner.start()
     try:
         subprocess.run(command, check=True, capture_output=True, text=True)
         spinner.stop()
-        print(f"[+] Masscan completed. Results saved to {output_file}")
+        print(f"[+] Masscan ({scan_type}) completed. Results saved to {output_file}")
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         spinner.stop()
         print(f"\n[!] Masscan failed. It may need sudo privileges. Error: {getattr(e, 'stderr', e)}")
